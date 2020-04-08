@@ -596,38 +596,106 @@ void ID()
 {
     ID_EX = passRegs(IF_ID);
     /*IMPLEMENT THIS*/
-    //decode here
-    uint32_t line = IF_ID.IR;
-    uint32_t rs = 0;
-    uint32_t rt = 0;
-    uint32_t sa = 0;
-    uint32_t immediate = 0;
-    uint32_t op = 0;
+   if(stall == 0){
 
-    ID_EX.IR = IF_ID.IR;
-    ID_EX.PC = IF_ID.PC;
-    if ((line | 0x03FFFFFF) ==  0x03FFFFFF){
-        rs = (line & 0x03E00000) >> 21;
-        rt = (line & 0x001F0000) >> 16;
-        sa = (line & 0x000007C0) >> 6;
-    } else {
-        rs = (line & 0x03E00000) >> 21;
-        rt = (line & 0x001F0000) >> 16;
-        immediate = line & 0x0000FFFF;
-        op = line & 0xFC000000;
-        if (op == 0x30000000 || op == 0x34000000 || op == 0x38000000){
-            //in here, ANDI, ORI, XORI are 0 extended
-            //do not use the sign extension function in this case
-            ID_EX.imm = immediate;
-        } else {
-            ID_EX.imm = sign_extension_32(immediate);
-        }
-    }
-    
-    ID_EX.A = rs;
-    ID_EX.B = rt;
-    ID_EX.sa = sa;
-    
+	    ID_EX.IR = IF_ID.IR;
+		uint32_t instruction = ID_EX.IR;
+		uint32_t op = (instruction & 0xFC000000) >>26; //opcode
+		uint32_t bk = instruction & 0x0000003F; //back of 32 bits to id the op code
+		ID_EX_rs = (instruction & 0x03E00000) >> 21; //source
+		ID_EX_rt = (instruction & 0x001F0000) >> 16; //destination
+		uint32_t im = instruction & 0x0000FFFF; //immediate / offset change to 32bits for the sign-extend
+		uint32_t h = (instruction & 0x0000007C0) >> 6; //for shift instructions) **** know as SA in the BOOK
+
+		if((EX_MEM_RegWrite && (EX_MEM_RegisterRd != 0)) && (EX_MEM_RegisterRd == ID_EX_rs)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardA = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+		if((EX_MEM_RegWrite && (EX_MEM_RegisterRd != 0)) && (EX_MEM_RegisterRd == ID_EX_rt)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardB = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+		if((EX_MEM_RegWrite && (EX_MEM_RegisterRt != 0)) && (EX_MEM_RegisterRt == ID_EX_rs)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardA = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+		if((EX_MEM_RegWrite && (EX_MEM_RegisterRt != 0)) && (EX_MEM_RegisterRt == ID_EX_rt)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardB = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+		if((MEM_WB_RegWrite && (MEM_WB_RegisterRt != 0)) && (MEM_WB_RegisterRt == ID_EX_rs)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardA = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+		if((MEM_WB_RegWrite && (MEM_WB_RegisterRt != 0)) && (MEM_WB_RegisterRt == ID_EX_rt)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardB = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+		if((MEM_WB_RegWrite && (MEM_WB_RegisterRd != 0)) && (MEM_WB_RegisterRd == ID_EX_rs)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardA = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+		if((MEM_WB_RegWrite && (MEM_WB_RegisterRd != 0)) && (MEM_WB_RegisterRd == ID_EX_rt)) {
+			if(ENABLE_FORWARDING == 1) {
+				forwardB = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+
+		if(op == 0X00) {
+			switch(bk) {
+				case 0x00://SLL last of the bk shouldSIM be 000000
+					ID_EX.A = CURRENT_STATE.REGS[ID_EX_rs];
+					ID_EX.B = CURRENT_STATE.REGS[h];
+					ID_EX.imm = 0;
+					break;
+				case 0x02://SRL last of the bk should be 000010
+					ID_EX.A = CURRENT_STATE.REGS[ID_EX_rs];
+					ID_EX.B = CURRENT_STATE.REGS[h];
+					ID_EX.imm = 0;
+					break;
+				case 0x03://SRA last of the bk should be 000011
+					ID_EX.A = CURRENT_STATE.REGS[ID_EX_rs];
+					ID_EX.B = CURRENT_STATE.REGS[h];
+					ID_EX.imm = 0;
+					break;
+				default: //Reg-Reg
+
+					ID_EX.A = CURRENT_STATE.REGS[ID_EX_rs];
+					ID_EX.B = CURRENT_STATE.REGS[ID_EX_rt];
+					ID_EX.imm = 0;
+					break;
+			}
+		} else { //immediate
+			ID_EX.A = CURRENT_STATE.REGS[ID_EX_rs];
+			ID_EX.B = CURRENT_STATE.REGS[ID_EX_rt];
+			ID_EX.imm = im;
+		}
+	if(stall != 0) {
+		ID_EX.IR = 0x00;
+	}
     
 }
 
@@ -637,9 +705,11 @@ void ID()
 void IF()
 {
     /*IMPLEMENT THIS*/
-    IF_ID.IR = mem_read_32(CURRENT_STATE.PC);
-    IF_ID.PC = CURRENT_STATE.PC+4;
-    NEXT_STATE.PC = CURRENT_STATE.PC+4;
+  if(stall == 0) {
+		IF_ID.IR = mem_read_32(CURRENT_STATE.PC);
+		IF_ID.PC = CURRENT_STATE.PC + 4; //incrementing to the next address
+		NEXT_STATE.PC = IF_ID.PC; // new instruction
+	}
 }
 
 
