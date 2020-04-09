@@ -6,6 +6,8 @@
 #include <stdbool.h>
 
 #include "mu-mips.h"
+
+int stall = 0;
 uint32_t sign_extension_32(uint32_t val){
     //check on the sign and repicate first bit
     if ((val & 0x00008000) == 0x00008000){
@@ -370,6 +372,9 @@ void WB()
         }
     }
     INSTRUCTION_COUNT++;
+    if(stall != 0 ) {
+		stall--;
+	}
 }
 
 /************************************************************/
@@ -597,38 +602,94 @@ void ID()
     ID_EX = passRegs(IF_ID);
     /*IMPLEMENT THIS*/
     //decode here
-    uint32_t line = IF_ID.IR;
-    uint32_t rs = 0;
-    uint32_t rt = 0;
-    uint32_t sa = 0;
-    uint32_t immediate = 0;
-    uint32_t op = 0;
+  if (stall == 0) {
+		/*IMPLEMENT THIS*/
+		ID_EX.IR = IF_ID.IR;
+		uint32_t rs;
+		uint32_t rt;
+		uint32_t immediate;
 
-    ID_EX.IR = IF_ID.IR;
-    ID_EX.PC = IF_ID.PC;
-    if ((line | 0x03FFFFFF) ==  0x03FFFFFF){
-        rs = (line & 0x03E00000) >> 21;
-        rt = (line & 0x001F0000) >> 16;
-        sa = (line & 0x000007C0) >> 6;
-    } else {
-        rs = (line & 0x03E00000) >> 21;
-        rt = (line & 0x001F0000) >> 16;
-        immediate = line & 0x0000FFFF;
-        op = line & 0xFC000000;
-        if (op == 0x30000000 || op == 0x34000000 || op == 0x38000000){
-            //in here, ANDI, ORI, XORI are 0 extended
-            //do not use the sign extension function in this case
-            ID_EX.imm = immediate;
-        } else {
-            ID_EX.imm = sign_extension_32(immediate);
-        }
-    }
-    
-    ID_EX.A = rs;
-    ID_EX.B = rt;
-    ID_EX.sa = sa;
-    
-    
+		rs = (IF_ID.IR & 0x03E00000) >> 21;
+		rt = (IF_ID.IR & 0x001F0000) >> 16;
+		immediate = IF_ID.IR & 0x0000FFFF; // use bit mask
+		ID_EX_rs = rs;
+		ID_EX_rt = rt;
+
+		// to forward from EX stage
+		if ((EX_MEM_RegWrite && (EX_MEM_RegisterRd != 0))
+				&& (EX_MEM_RegisterRd == ID_EX_rs)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardA = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+		if ((EX_MEM_RegWrite && (EX_MEM_RegisterRd != 0))
+				&& (EX_MEM_RegisterRd == ID_EX_rt)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardB = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+		if ((EX_MEM_RegWrite && (EX_MEM_RegisterRt != 0))
+				&& (EX_MEM_RegisterRt == ID_EX_rs)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardA = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+		if ((EX_MEM_RegWrite && (EX_MEM_RegisterRt != 0))
+				&& (EX_MEM_RegisterRt == ID_EX_rt)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardB = 0x10;
+			} else {
+				stall = 2;
+			}
+		}
+
+		// to forward form MEM stage
+		if ((MEM_WB_RegWrite && (MEM_WB_RegisterRt != 0))
+				&& (MEM_WB_RegisterRt == ID_EX_rs)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardA = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+		if ((MEM_WB_RegWrite && (MEM_WB_RegisterRt != 0))
+				&& (MEM_WB_RegisterRt == ID_EX_rt)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardB = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+		if ((MEM_WB_RegWrite && (MEM_WB_RegisterRd != 0))
+				&& (MEM_WB_RegisterRd == ID_EX_rs)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardA = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+		if ((MEM_WB_RegWrite && (MEM_WB_RegisterRd != 0))
+				&& (MEM_WB_RegisterRd == ID_EX_rt)) {
+			if (ENABLE_FORWARDING == 1) {
+				forwardB = 0x01;
+			} else {
+				stall = 1;
+			}
+		}
+
+		ID_EX.A = CURRENT_STATE.REGS[ID_EX_rs];
+		ID_EX.B = CURRENT_STATE.REGS[ID_EX_rt];
+		ID_EX.imm = immediate;
+		if (stall != 0) {
+			ID_EX.IR = 0x00;
+		}
+	}
 }
 
 /************************************************************/
@@ -636,10 +697,12 @@ void ID()
 /************************************************************/
 void IF()
 {
-    /*IMPLEMENT THIS*/
-    IF_ID.IR = mem_read_32(CURRENT_STATE.PC);
-    IF_ID.PC = CURRENT_STATE.PC+4;
-    NEXT_STATE.PC = CURRENT_STATE.PC+4;
+   if (stall == 0) {
+		IF_ID.IR = mem_read_32(CURRENT_STATE.PC);
+		NEXT_STATE.PC = CURRENT_STATE.PC + 4; //correct
+		IF_ID.PC = NEXT_STATE.PC;
+		
+	}
 }
 
 
