@@ -6,6 +6,25 @@
 #include <stdbool.h>
 
 #include "mu-mips.h"
+
+
+
+#define GET_OPCODE(x)		( ( x >> 26 ) & 0x3F )
+#define GET_RS(x)			( ( x >> 21 ) & 0x1F )
+#define GET_RT(x)			( ( x >> 16 ) & 0x1F )
+#define GET_RD(x)			( ( x >> 11 ) & 0x1F )
+#define GET_SA(x)			( ( x >> 6  ) & 0x1F )
+#define GET_FUNCTCODE(x)	( x & 0x3F )
+#define GET_IMM(x)			( x & 0xFFFF )
+#define GET_ADDRESS(x)		( x & 0x3FFFFFF )
+
+#define SET_OPCODE(x, op)       ( x |= ( ( op ) << 26) )
+#define SET_FUNCTCODE(x, fc)    ( x |= ( fc ) )
+
+#define intr_lookup_limit		0x2C
+#define opcode_0x01_limit   	0x02
+#define opcode_0x00_limit   	0x2B
+
 int ENABLE_FORWARDING = 0;
 int stall = 0;
 uint32_t ID_EX_rs = 0;
@@ -18,6 +37,7 @@ int EX_MEM_RegWrite = 1;
 int MEM_WB_RegWrite = 1;
 int forwardA = 0;
 int forwardB = 0;
+
 
 
 uint32_t sign_extension_32(uint32_t val){
@@ -384,9 +404,6 @@ void WB()
         }
     }
     INSTRUCTION_COUNT++;
-   if(stall != 0 ) {
-		stall--;
-	}
 }
 
 /************************************************************/
@@ -394,7 +411,7 @@ void WB()
 /************************************************************/
 void MEM()
 {
-    MEM_WB = passRegs(EX_MEM);
+    //MEM_WB = passRegs(EX_MEM);
     /*IMPLEMENT THIS*/
     MEM_WB.IR = EX_MEM.IR;
     MEM_WB.ALUOutput = EX_MEM.ALUOutput;
@@ -440,10 +457,22 @@ void MEM()
 /************************************************************/
 void EX()
 {
-    EX_MEM = passRegs(ID_EX);
+    //EX_MEM = passRegs(ID_EX);
+    EX_MEM.A = ID_EX.A;
+    EX_MEM.B = ID_EX.B;
+    EX_MEM.ALUOutput = ID_EX.ALUOutput;
+    EX_MEM.imm = ID_EX.imm;
+    EX_MEM.IR = ID_EX.IR;
+    EX_MEM.LMD = ID_EX.IR;
+    EX_MEM.PC = ID_EX.PC;
+    
+    
     printf("EX stage\n");
     /*IMPLEMENT THIS*/
     //excusion stage
+    
+    
+    
     EX_MEM.IR = ID_EX.IR;
     uint32_t line = EX_MEM.IR;
     uint32_t funct = 0;
@@ -611,7 +640,7 @@ void EX()
 /************************************************************/
 void ID()
 {
-    ID_EX = passRegs(IF_ID);
+    //ID_EX = passRegs(IF_ID);
     /*IMPLEMENT THIS*/
     //decode here
     if (stall == 0) {
@@ -703,14 +732,18 @@ void ID()
 		}
 	}
 }
-void IF() {
-	if (stall == 0) {
-		IF_ID.IR = mem_read_32(CURRENT_STATE.PC);
-		NEXT_STATE.PC = CURRENT_STATE.PC + 4; //correct
-		IF_ID.PC = NEXT_STATE.PC;
-		
-	}
+
+/************************************************************/
+/* instruction fetch (IF) pipeline stage:                                                              */
+/************************************************************/
+void IF()
+{
+    /*IMPLEMENT THIS*/
+    IF_ID.IR = mem_read_32(CURRENT_STATE.PC);
+    IF_ID.PC = CURRENT_STATE.PC+4;
+    NEXT_STATE.PC = CURRENT_STATE.PC+4;
 }
+
 
 /************************************************************/
 /* Initialize Memory                                                                                                    */
@@ -769,116 +802,116 @@ void print_instruction(uint32_t line){
             case 0x20:
                 //Add rd, rs, rt
                 printf("ADD rd, rs, rt   ");
-                printf("ADD %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+            //    printf("ADD %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
                 
             case 0x21:
                 //AddU rd, rs, rt
                 printf("ADDU rd, rs, rt   ");
-                printf("ADD %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+             //   printf("ADD %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x22:
                 //SUB rd, rs, rt
                 printf("SUB rd, rs, rt   ");
-                printf("SUB %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+            //    printf("SUB %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x23:
                 //SUBU rd, rs, rt
                 printf("SUBU rd, rs, rt   ");
-                printf("SUBU %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+           //     printf("SUBU %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x18:
                 //MULT rs, rt
                 printf("MULT rs, rt   ");
-                printf("MULT %s, %s\n", register_name[rs], register_name[rt]);
+           //     printf("MULT %s, %s\n", register_name[rs], register_name[rt]);
                 break;
             case 0x19:
                 //MULTU rs, rt
                 printf("MULTU rs, rt   ");
-                printf("MULTU %s, %s\n", register_name[rs], register_name[rt]);
+            //    printf("MULTU %s, %s\n", register_name[rs], register_name[rt]);
                 break;
             case 0x1A:
                 //DIV rs, rt
                 printf("DIV rs, rt   ");
-                printf("DIV %s, %s\n", register_name[rs], register_name[rt]);
+            //    printf("DIV %s, %s\n", register_name[rs], register_name[rt]);
                 break;
             case 0x1B:
                 //DIVU rs, rt
                 printf("DIVU rs, rt   ");
-                printf("DIVU %s, %s\n", register_name[rs], register_name[rt]);
+            //    printf("DIVU %s, %s\n", register_name[rs], register_name[rt]);
                 break;
             case 0x24:
                 //AND rd, rs, rt
                 printf("AND rd, rs, rt   ");
-                printf("AND %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+            //    printf("AND %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x25:
                 // OR rd, rs, rt
                 printf("OR rd, rs, rt   ");
-                printf("OR %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+            //    printf("OR %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x26:
                 // XOR rd, rs, rt
                 printf("XOR rd, rs, rt   ");
-                printf("XOR %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+           //     printf("XOR %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x27:
                 // NOR rd, rs, rt
                 printf("NOR rd, rs, rt   ");
-                printf("NOR %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+            //    printf("NOR %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x2A:
                 //SLT rd, rs, rt
                 printf("SLT rd, rs, rt   ");
-                printf("SLT %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
+            //    printf("SLT %s, %s, %s\n", register_name[rd], register_name[rs], register_name[rt]);
                 break;
             case 0x00:
                 //SLL rd, rt, sa
                 printf("SLL rd, rs, sa   ");
-                printf("SLL %s, %s, %x\n", register_name[rd], register_name[rs], sa);
+            //    printf("SLL %s, %s, %x\n", register_name[rd], register_name[rs], sa);
                 break;
             case 0x03:
                 printf("SRA rd, rs, sa   ");
                 //SRA rd, rt, sa
-                printf("SRA %s, %s, %x\n", register_name[rd], register_name[rs], sa);
+            //    printf("SRA %s, %s, %x\n", register_name[rd], register_name[rs], sa);
                 break;
             case 0x02:
                 //SRL rd, rt, sa
                 printf("SRL rd, rs, sa   ");
-                printf("SRL %s, %s, %x\n", register_name[rd], register_name[rs], sa);
+            //    printf("SRL %s, %s, %x\n", register_name[rd], register_name[rs], sa);
                 break;
             case 0x10:
                 //MFHI rd
                 printf("MFHI rd   ");
-                printf("MFHI %s\n", register_name[rd]);
+           //     printf("MFHI %s\n", register_name[rd]);
                 break;
             case 0x11:
                 //MTHI rs
                 printf("MTHI rs   ");
-                printf("MTHI %s\n", register_name[rs]);
+           //     printf("MTHI %s\n", register_name[rs]);
                 break;
             case 0x12:
                 //MFLO rd
                 printf("MFLO rd   ");
-                printf("MFLO %s\n", register_name[rd]);
+           //     printf("MFLO %s\n", register_name[rd]);
                 break;
             case 0x13:
                 //MTLO rs
                 printf("MTLO rs   ");
-                printf("MTLO %s\n", register_name[rs]);
+             //   printf("MTLO %s\n", register_name[rs]);
                 break;
             case 0x08:
                 //JR rs
                 printf("JR rs   ");
-                printf("JR %s\n", register_name[rs]);
+             //   printf("JR %s\n", register_name[rs]);
                 break;
             case 0x09:
                 //JALR rs
                 //JALR rd, rs
                 printf("JALR rs   ");
-                printf("JALR %s\n", register_name[rs]);
+             //   printf("JALR %s\n", register_name[rs]);
                 printf("JALR rd, rs   ");
-                printf("JALR %s, %s\n", register_name[rd], register_name[rs]);
+              //  printf("JALR %s, %s\n", register_name[rd], register_name[rs]);
                 break;
             default:
                 break;
@@ -896,104 +929,104 @@ void print_instruction(uint32_t line){
                 //ADDI rt, rs, immediate
                 immediate = sign_extension_32(immediate);
                 printf("ADDI, rt, rs, immediate   ");
-                printf("ADDI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
+            //    printf("ADDI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
                 break;
             case 0x24000000:
                 //ADDIU rt, rs, immediate
                 immediate = sign_extension_32(immediate);
                 printf("ADDIU, rt, rs, immediate   ");
-                printf("ADDIU %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
+            //    printf("ADDIU %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
                 break;
             case 0x30000000:
                 //ANDI rt, rs, immediate
                 immediate = line & 0x00000FFF;
                 printf("ANDI, rt, rs, immediate   ");
-                printf("ANDI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
+             //   printf("ANDI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
                 break;
             case 0x34000000:
                 //ORI rt, rs, immediate
                 immediate = line & 0x00000FFF;
                 printf("ORI, rt, rs, immediate   ");
-                printf("ORI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
+            //    printf("ORI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
                 break;
             case 0x38000000:
                 //XORI rt, rs, immediate
                 printf("XORI, rt, rs, immediate   ");
-                printf("XORI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
+            //    printf("XORI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
                 break;
             case 0x28000000:
                 //SLTI rt, rs, immediate
                 immediate = immediate << 16;
                 immediate = sign_extension_32(immediate);
                 printf("SLTI, rt, rs, immediate   ");
-                printf("SLTI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
+              //  printf("SLTI %s, %s, %x\n", register_name[rt], register_name[rs], immediate);
                 break;
             case 0x8C000000:
                 //LW rt, offset(base)
                 offset = sign_extension_32(offset);
                 printf("LW, rt, offset(base)   ");
-                printf("LW %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
+              //  printf("LW %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
                 break;
             case 0x80000000:
                 //LB rt, offset(base)
                 offset = sign_extension_32(offset);
                 printf("LB, rt, offset(base)   ");
-                printf("LB %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
+             //   printf("LB %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
                 break;
             case 0x81000000:
                 //LH rt, offset(base)
                 offset = sign_extension_32(offset);
                 printf("LH, rt, offset(base)   ");
-                printf("LH %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
+             //   printf("LH %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
                 break;
                 
             case 0x3C000000:
                 //LUI rt, immediate
                 immediate |= 0x00000000;
                 printf("LUI rt, immediate   ");
-                printf("LUI %s, %x\n", register_name[rt], immediate);
+              //  printf("LUI %s, %x\n", register_name[rt], immediate);
                 break;
             case 0xAC000000:
                 //SW rt, offset(base)
                 offset = sign_extension_32(offset);
                 printf("SW, rt, offset(base)   ");
-                printf("SW %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
+               // printf("SW %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
                 break;
             case 0xA0000000:
                 //SB rt, offset(base)
                 offset = sign_extension_32(offset);
                 printf("SB, rt, offset(base)   ");
-                printf("SB %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
+              //  printf("SB %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
                 break;
             case 0xA1000000:
                 //SH rt, offset(base)
                 offset = sign_extension_32(offset);
                 printf("SH, rt, offset(base)   ");
-                printf("SH %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
+              //  printf("SH %s, %x(%s)\n", register_name[rt], offset, register_name[base]);
                 break;
             case 0x10000000:
                 //BEQ rs, rt, offset
                 offset = sign_extension_32(offset);
                 printf("BWQ rs, rt, offset   ");
-                printf("BEQ %s, %s, %x\n", register_name[rs], register_name[rt], (offset<<2));
+               // printf("BEQ %s, %s, %x\n", register_name[rs], register_name[rt], (offset<<2));
                 break;
             case 0x14000000:
                 //BNE rs, rt, offset
                 offset = sign_extension_32(offset);
                 printf("BNE rs, rt, offset   ");
-                printf("BNE %s, %s, %x\n", register_name[rs], register_name[rt], (offset<<2));
+              //  printf("BNE %s, %s, %x\n", register_name[rs], register_name[rt], (offset<<2));
                 break;
             case 0x18000000:
                 //BLEZ rs, offset
                 offset = sign_extension_32(offset);
                 printf("BLEZ rs, rt, offset   ");
-                printf("BLEZ %s,%x\n", register_name[rs], (offset<<2));
+               // printf("BLEZ %s,%x\n", register_name[rs], (offset<<2));
                 break;
             case 0x1C000000:
                 //BGTZ rs, offset
                 offset = sign_extension_32(offset);
                 printf("BGTZ rs, rt, offset   ");
-                printf("BGTZ %s, %x\n", register_name[rs], (offset<<2));
+              //  printf("BGTZ %s, %x\n", register_name[rs], (offset<<2));
                 break;
             case 0x08000000:
                 //J target
@@ -1041,24 +1074,8 @@ void show_pipeline(){
     printf("MEM/WB.LMD:  %x\n\n", MEM_WB.LMD);
     
 }
-/***************************************************************/
-/* Pass register                                                                                                                                  */
-/***************************************************************/
 
-CPU_Pipeline_Reg passRegs(CPU_Pipeline_Reg from){
-    CPU_Pipeline_Reg to;
-    to.A = from.A;
-    to.B = from.B;
-    to.ALUOutput = from.ALUOutput;
-    to.HI = from.HI;
-    to.LO = from.LO;
-    to.imm = from.imm;
-    to.IR = from.IR;
-    to.LMD = from.IR;
-    to.PC = from.PC;
-    to.sa = from.sa;
-    return to;
-}
+
 /***************************************************************/
 /* main                                                                                                                                   */
 /***************************************************************/
@@ -1071,7 +1088,8 @@ int main(int argc, char *argv[]) {
         printf("Error: You should provide input file.\nUsage: %s <input program> \n\n",  argv[0]);
         exit(1);
     }
-    
+    ENABLE_FORWARDING = 0;
+
     strcpy(prog_file, argv[1]);
     initialize();
     load_program();
@@ -1081,3 +1099,4 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
+
