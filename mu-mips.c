@@ -1088,7 +1088,7 @@ int main(int argc, char *argv[]) {
         printf("Error: You should provide input file.\nUsage: %s <input program> \n\n",  argv[0]);
         exit(1);
     }
-    ENABLE_FORWARDING = 0;
+
 
     strcpy(prog_file, argv[1]);
     initialize();

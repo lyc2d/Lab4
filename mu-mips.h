@@ -1,4 +1,4 @@
-#include <stdint.h>
+    #include <stdint.h>
 
 #define FALSE 0
 #define TRUE  1
@@ -52,7 +52,18 @@ typedef struct CPU_Pipeline_Reg_Struct{
 	uint32_t B;
 	uint32_t imm;
 	uint32_t ALUOutput;
+        uint32_t ALUOutput2;
+
 	uint32_t LMD;
+        uint32_t HI;
+        uint32_t LO;
+        uint32_t sa;
+        uint32_t FORWARDA;
+        uint32_t FORWARDB;
+
+
+
+
 	
 } CPU_Pipeline_Reg;
 
@@ -102,4 +113,5 @@ void IF();/*IMPLEMENT THIS*/
 void show_pipeline();/*IMPLEMENT THIS*/
 void initialize();
 void print_program(); /*IMPLEMENT THIS*/
+
 
