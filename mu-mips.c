@@ -472,7 +472,7 @@ void EX()
     printf("EX stage\n");
     /*IMPLEMENT THIS*/
     //excusion stage
-    
+
     
     
     EX_MEM.IR = ID_EX.IR;
@@ -576,23 +576,23 @@ void EX()
             case 0x20000000 ... 0x24000000:
                 //ADDI and ADDIU
                 printf("ADDI and ADDIU\n");
-                EX_MEM.ALUOutput = CURRENT_STATE.REGS[ID_EX.A] + ID_EX.imm;
+                EX_MEM.ALUOutput = ID_EX.A + ID_EX.imm;
                 break;
             case 0x30000000:
                 //ANDI
-                EX_MEM.ALUOutput = CURRENT_STATE.REGS[ID_EX.A] & ID_EX.imm;
+                EX_MEM.ALUOutput = ID_EX.A & ID_EX.imm;
                 break;
             case 0x34000000:
                 //ORI
-                EX_MEM.ALUOutput = CURRENT_STATE.REGS[ID_EX.A] | ID_EX.imm;
+                EX_MEM.ALUOutput = ID_EX.A | ID_EX.imm;
                 break;
             case 0x38000000:
                 //XORI
-                EX_MEM.ALUOutput = CURRENT_STATE.REGS[ID_EX.A] ^ ID_EX.imm;
+                EX_MEM.ALUOutput = ID_EX.A ^ ID_EX.imm;
                 break;
             case 0x28000000:
                 //SLTI
-                if (CURRENT_STATE.REGS[EX_MEM.A] < EX_MEM.imm){
+                if (EX_MEM.A < EX_MEM.imm){
                     EX_MEM.ALUOutput = 1;
                 } else {
                     EX_MEM.ALUOutput = 0;
@@ -600,12 +600,12 @@ void EX()
                 break;
             case 0x8C000000:
                 //LW
-                EX_MEM.ALUOutput = (CURRENT_STATE.REGS[ID_EX.A] + ID_EX.imm);
+                EX_MEM.ALUOutput = (ID_EX.A + ID_EX.imm);
                 EX_MEM.B = ID_EX.B;
                 break;
             case 0x80000000:
                 //LB
-                EX_MEM.ALUOutput = (CURRENT_STATE.REGS[ID_EX.A] + ID_EX.imm);
+                EX_MEM.ALUOutput = (ID_EX.A + ID_EX.imm);
                 EX_MEM.B = ID_EX.B;
                 break;
             case 0x81000000:
@@ -620,17 +620,19 @@ void EX()
                 break;
             case 0xAC000000:
                 //SW
-                EX_MEM.ALUOutput = (CURRENT_STATE.REGS[ID_EX.A] + ID_EX.imm);
+
+                EX_MEM.ALUOutput = ID_EX.A + ID_EX.imm;
                 EX_MEM.B = ID_EX.B;
                 break;
             case 0xA0000000:
                 //SB
-                EX_MEM.ALUOutput = (CURRENT_STATE.REGS[ID_EX.A] + ID_EX.imm);
+                EX_MEM.ALUOutput = ID_EX.A + ID_EX.imm;
                 EX_MEM.B = ID_EX.B;
                 break;
             case 0xA1000000:
                 //SH
-                EX_MEM.ALUOutput = (CURRENT_STATE.REGS[ID_EX.A] + ID_EX.imm);
+
+                EX_MEM.ALUOutput = ID_EX.A + ID_EX.imm; ID_EX.imm;
                 EX_MEM.B = ID_EX.B;
                 break;
         }
