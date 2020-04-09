@@ -384,6 +384,9 @@ void WB()
         }
     }
     INSTRUCTION_COUNT++;
+   if(stall != 0 ) {
+		stall--;
+	}
 }
 
 /************************************************************/
@@ -700,7 +703,14 @@ void ID()
 		}
 	}
 }
-
+void IF() {
+	if (stall == 0) {
+		IF_ID.IR = mem_read_32(CURRENT_STATE.PC);
+		NEXT_STATE.PC = CURRENT_STATE.PC + 4; //correct
+		IF_ID.PC = NEXT_STATE.PC;
+		
+	}
+}
 
 /************************************************************/
 /* Initialize Memory                                                                                                    */
