@@ -457,6 +457,8 @@ void MEM()
 /************************************************************/
 void EX()
 {
+
+    if (stall == 0) {
     //EX_MEM = passRegs(ID_EX);
     EX_MEM.A = ID_EX.A;
     EX_MEM.B = ID_EX.B;
@@ -634,6 +636,7 @@ void EX()
         }
     }
 }
+}
 
 /************************************************************/
 /* instruction decode (ID) pipeline stage:                                                         */
@@ -690,7 +693,7 @@ void ID()
 			}
 		}
 
-		// to forward form MEM stage
+		// to forward from MEM stage
 		if ((MEM_WB_RegWrite && (MEM_WB_RegisterRt != 0))
 				&& (MEM_WB_RegisterRt == ID_EX_rs)) {
 			if (ENABLE_FORWARDING == 1) {
