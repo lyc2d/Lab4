@@ -52,14 +52,14 @@ typedef struct CPU_Pipeline_Reg_Struct{
 	uint32_t B;
 	uint32_t imm;
 	uint32_t ALUOutput;
-        uint32_t ALUOutput2;
+
 
 	uint32_t LMD;
         uint32_t HI;
         uint32_t LO;
         uint32_t sa;
-        uint32_t FORWARDA;
-        uint32_t FORWARDB;
+
+
 
 
 
